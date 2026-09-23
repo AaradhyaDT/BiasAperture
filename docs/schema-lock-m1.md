@@ -48,6 +48,12 @@ Southeast Asian, Indian, Middle Eastern
 Per row: `metric_name`, `subgroup`, `subgroup_sample_size`,
 `metric_value`, `ci_lower`, `ci_upper`, `p_value`, `insufficient_sample`.
 
+**Statistical Extension Fields (Non-breaking, Phase 2):**
+- `raw_p_value`: Unadjusted asymptotic p-value from metric-specific test.
+- `adjusted_p_value`: FWER-adjusted p-value via Holm–Bonferroni step-down.
+- `hypothesis_family`: Test grouping (`"selection_rate"`, `"tpr_conditional"`, `"conditional_odds"`).
+- `adjustment_method`: Adjustment label (e.g. `"holm_bonferroni"`).
+
 `metric_name` is one of: `demographic_parity_difference`,
 `equalized_odds_difference`, `equal_opportunity_difference`,
 `disparate_impact_ratio` (the Core Four, FR-003).

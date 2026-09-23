@@ -17,7 +17,30 @@
 Example entry point:
 
 ```powershell
-uv run bias-aperture --predictions-file data/processed/fairface_predictions_val.csv --protected-attr gender --true-label-col true_gender --predicted-label-col predicted_gender --race-col subgroup_race --gender-col subgroup_gender --age-col subgroup_age --output-report report/audit_report_val_gender.html
+# Standard unitary axis audit
+uv run bias-aperture audit \
+  -i data/processed/fairface_predictions_val.csv \
+  -a race \
+  --true-label-col true_gender \
+  --predicted-label-col predicted_gender \
+  --race-col subgroup_race \
+  --gender-col subgroup_gender \
+  --age-col subgroup_age \
+  -o report/audit_val_race_verified.html \
+  --backend dual \
+  --bca-resamples 1000
+
+# Intersectional compound axis audit
+uv run bias-aperture audit \
+  -i data/processed/fairface_predictions_val.csv \
+  -a race_gender \
+  --true-label-col true_gender \
+  --predicted-label-col predicted_gender \
+  --race-col subgroup_race \
+  --gender-col subgroup_gender \
+  --age-col subgroup_age \
+  -o report/audit_val_race_gender_verified.html \
+  --backend dual
 ```
 
 ## Handoff contract

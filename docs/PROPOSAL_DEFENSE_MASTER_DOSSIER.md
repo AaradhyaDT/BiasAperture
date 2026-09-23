@@ -619,27 +619,33 @@ _Ideal Value:_ $0.0$. Ensures qualified individuals have an equal probability of
 
 ## 3.4 Statistical Rigour Protocol & Safeguard Guardrails
 
-### 1. Chi-Squared ($\chi^2$) Test of Independence (SciPy)
+### 1. Metric-Specific Hypothesis Testing ($\chi^2$ Independence & Conditional Strata)
 
-For every demographic subgroup $g$ against reference group $ref$, a $2 \times 2$ contingency table is constructed:
-$$\begin{pmatrix} \text{Count}(\hat{Y}=1, D=g) & \text{Count}(\hat{Y}=0, D=g) \\ \text{Count}(\hat{Y}=1, D=ref) & \text{Count}(\hat{Y}=0, D=ref) \end{pmatrix}$$
+Rather than evaluating a single omnibus contingency table, hypothesis testing is tailored specifically to each metric's definition:
 
-- **Null Hypothesis ($H_0$):** Model predictions are statistically independent of group membership.
-- **Decision Rule:** Reject $H_0$ if $p < 0.05$. The exact $p$-value is reported to 4 decimal places.
+- **Demographic Parity (DPD) & Disparate Impact (DIR):** Pearson's $\chi^2$ test of independence evaluating selection rate invariance across demographic strata:
+  $$H_0: P(\hat{Y}=1 \mid D=g) = P(\hat{Y}=1 \mid D=ref)$$
+- **Equal Opportunity (EOP):** Conditional $\chi^2$ independence test conditioned strictly on positive ground-truth instances ($Y_{\text{true}}=1$):
+  $$H_0: P(\hat{Y}=1 \mid Y=1, D=g) = P(\hat{Y}=1 \mid Y=1, D=ref) \quad (\text{i.e. } \text{TPR}_g = \text{TPR}_{ref})$$
+- **Equalized Odds (EOD):** Joint union-intersection hypothesis test combining conditional $\chi^2$ tests on both ground-truth strata ($Y_{\text{true}}=1$ for TPR equality and $Y_{\text{true}}=0$ for FPR equality) via Bonferroni combination:
+  $$p_{\text{joint}} = \min\left(1.0, 2 \cdot \min(p_{\text{TPR}}, p_{\text{FPR}})\right)$$
+- **Family-Wise Error Rate (FWER) Control:** Step-down Holm–Bonferroni adjustment applied across hypothesis families (`selection_rate`, `conditional_odds`), reporting both `raw_p_value` and `adjusted_p_value` to 4 decimal places.
 
 ### 2. Stratified Bootstrap Confidence Intervals (95% CI)
 
 To quantify uncertainty without assuming Gaussian distribution:
 
-1. Resample $N$ records with replacement from the evaluated cohort, stratified by demographic label.
-2. Recompute metric $\theta^{(b)}$ for resample $b \in \{1, 2, \dots, B\}$, where $B = 1,000$.
-3. Sort estimates $\theta^{(1)} \le \theta^{(2)} \le \dots \le \theta^{(B)}$.
-4. Extract the empirical percentiles:
-   $$CI_{lower} = \theta^{(\lfloor 0.025 \times B \rfloor)}, \quad CI_{upper} = \theta^{(\lceil 0.975 \times B \rceil)}$$
+1. **Global Metrics (BCa Bootstrap):**
+   - Stratified resampling across demographic groups ($B \ge 1,000$).
+   - Acceleration parameter $\hat{a}$ computed via leave-one-out jackknife for $n \le 300$, and delete-$d$ subsampled block jackknife ($d = \max(1, n // 100)$) for large cohorts ($n > 300$) to preserve asymptotic consistency and computational efficiency.
+   - Robust fallback to empirical percentiles or point estimate clamp if resampling degenerates.
+2. **Subgroup Metrics (Empirical Percentile CIs):**
+   - Stratified bootstrap resampling evaluating subgroup disparity relative to cohort baseline, completely eliminating arbitrary heuristic $\pm 0.05$ windows.
 
-### 3. The Small-Sample Guardrail ($n < 30$)
+### 3. The Small-Sample Guardrail ($n < 30$) & Backend Isolation
 
-Enforced by `MetricResult.__post_init__`: If a demographic slice has $n < 30$ samples, the metric point estimate is suppressed (`metric_value = None`, `insufficient_sample = True`). This prevents small-sample noise from polluting audit conclusions.
+- **NFR-003 Guardrail:** Enforced by `MetricResult.__post_init__`: If a demographic slice has $n < 30$ samples, the metric point estimate is suppressed (`metric_value = None`, `insufficient_sample = True`).
+- **Backend Fault Isolation:** AIF360 and Fairlearn run in strict isolation without silent fallback. If a backend fails or lacks dependencies, it returns `insufficient_sample=True` with explicit reasons, and `CrossValidationOrchestrator` emits a `DivergenceAlert` with `difference = NaN` rather than masking outages.
 
 ---
 

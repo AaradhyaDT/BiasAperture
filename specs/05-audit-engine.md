@@ -13,9 +13,11 @@ For binary or one-vs-rest labels across protected groups:
 
 Fair values are zero for difference metrics and one for the ratio metric.
 
-## Backend harmonization
+## Backend harmonization and failure isolation
 
-Fairlearn and AIF360 are treated as independent strategies. Their known definitional differences are normalized before comparison: equalized odds uses the worst-case TPR/FPR gap, and equal opportunity is stored as an unsigned difference. A cross-validation layer can flag a backend divergence beyond the configured tolerance.
+Fairlearn and AIF360 are treated as independent strategies. Their known definitional differences are normalized before comparison: equalized odds uses the worst-case TPR/FPR gap, and equal opportunity is stored as an unsigned difference. A cross-validation layer flags mathematical divergences beyond configured thresholds ($|\Delta| > 0.05$ for difference metrics, $|\Delta| > 0.10$ for ratios).
+
+Backend failures or missing dependencies are strictly isolated: if a backend raises an error or is unavailable, the system produces `insufficient_sample=True` records with error reasons and emits `DivergenceAlert` with `difference=nan` rather than silently falling back to an alternate backend.
 
 ## Edge cases
 
